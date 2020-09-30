@@ -5,7 +5,11 @@ const client = new Discord.Client();
 const sqlite = require("sqlite3").verbose();
 const {CanvasRenderService} = require('chartjs-node-canvas');
 const fs = require('fs');
-const { query } = require('express');
+const { connect } = require('http2');
+const { off } = require('process');
+const { emitKeypressEvents } = require('readline');
+const _ = require('lodash');
+const { compact } = require('lodash');
  
 client.commands = new Discord.Collection();
 const commandFiles = fs.readdirSync('./commands/').filter(file => file.endsWith('.js'));
@@ -29,8 +33,11 @@ client.on(`ready`, () => {
         console.log('Conectado a datos.db');
     });
 
-    db.run(`CREATE TABLE IF NOT EXISTS user(userid INTEGER NOT NULL, username TEXT NOT NULL, total INTEGER NOT NULL)`);
-    db.run(`CREATE TABLE IF NOT EXISTS channel(channelid INTEGER NOT NULL, channelname TEXT NOT NULL, total INTEGER NOT NULL)`)
+    db.run(`CREATE TABLE IF NOT EXISTS user(ChannelId TEXT NOT NULL, UserId TEXT NOT NULL, Username TEXT NOT NULL, Total INTEGER NOT NULL)`);
+    db.run(`CREATE TABLE IF NOT EXISTS channel(ServerId TEXT NOT NULL, ChannelId TEXT NOT NULL, ChannelName TEXT NOT NULL, Total INTEGER NOT NULL)`)
+    db.run(`CREATE TABLE IF NOT EXISTS server(ServerId TEXT, ServerName TEXT)`)
+
+    addingServerId(db);
 });
 
 client.on(`message`, (message) => {
@@ -46,18 +53,6 @@ client.on(`message`, (message) => {
     let userid = message.author.id;
     let uname = message.author.tag;
     let isAdmin = message.channel.permissionsFor(message.member).has("ADMINISTRATOR", true);
-
-    if(command == 'getdata'){
-        client.commands.get('getdata').execute(message, db, userquery, userid, uname);
-    }
-
-    if(command == 'total-user'){
-        client.commands.get('total').execute(message);
-    }
-
-    if(command == 'total-channel'){
-        client.commands.get('total-channel').execute(message);
-    }
 
     if(command == 'end'){
         if(isAdmin == false) return;
@@ -91,13 +86,147 @@ client.on(`message`, (message) => {
         message.channel.send(`Cant log messages because -> New array: ${array.slice(-1)} != 1`)
     }
 
+    try {
+        if (!client.commands.has(command) || command == ('start' || 'end')) return;
+        client.commands.get(command).execute(message, db, userquery, userid, uname);
+    } catch (error){
+        console.error(error);
+        message.reply(`There was an error trying to execute ${command}. . .`)
+    } 
+
 
 });
+
+
+function addingServerId(db) {
+
+    const serverIdList = [];
+    let serverquery = `SELECT ServerId FROM server`;
+
+    client.guilds.cache.forEach(server => {
+        serverIdList.push(server.id)
+    })
+
+    db.all(serverquery, [], function(err, rows) {
+
+        if(err){
+            console.log(err);
+        }
+        
+        serverIdList.forEach(serverId =>{
+            let checker = 0;
+            rows.forEach(function (rows) {
+                if(rows.ServerId == serverId){
+                    checker ++;
+                }
+            })
+            if(checker == 0){
+                let serverName = client.guilds.cache.get(serverId).name;
+                let insertdata = db.prepare(`INSERT INTO server VALUES(?,?)`)
+                insertdata.run(serverId, serverName);
+                insertdata.finalize();
+                console.log('---Added new server---');
+            }
+        })
+    });
+}
 
 client.login(BOT_TOKEN); 
 
 
+/*if (rows === undefined) {
+            serverIdList.forEach(server => {
+                let insertdata = db.prepare(`INSERT INTO server VALUES(?,?)`);
+                insertdata.run(serverIdList[i], serverNameList[i]);
+                i++;
+                insertdata.finalize();
+            })
+            console.log('Added new data to server table. REASON: No data inside')
+            return;
+        } else {
+            serverIdList.forEach(serverId =>{
+                rows.forEach(function (rows) {
+                    console.log(rows, rows.ServerId, serverId)
+                    if (rows.ServerId == serverId) return;
+                    else{
+                        let insertdata = db.prepare(`INSERT INTO server(serverId) VALUES(?)`)
+                        insertdata.run(serverId);
+                        insertdata.finalize();
+                        console.log('---Added new server---');
+                    }
+                })
+            })
+        }
+    }); */
 
+
+
+
+
+/*function getGuildUsers(message){
+    client.guilds.cache.forEach(guild => {
+        let randomList = [];
+        let dndList = [];
+        let idleList = [];
+        let botList = [];
+        let offlineList = [];
+        let totalOnline = 0;
+        message.channel.send(`\n\n---Guild with id : ${guild.name} members---\n\n`)
+        guild.members.cache.forEach(element => {
+            if(element.user.bot == false){
+                if(element.user.presence.status == 'online'){
+                    randomList.push(`${element.user.username} with status is online`);
+                    totalOnline++;
+                } else if (element.user.presence.status == 'offline'){
+                    offlineList.push(`${element.user.username} with status is offline`)
+                } else if(element.user.presence.status == 'idle'){
+                    idleList.push(`${element.user.username} is afk`);
+                } else if(element.user.presence.status == 'dnd'){
+                    dndList.push(`${element.user.username} is in do not disturb`);
+                }
+            }else{
+                botList.push(`The bot ${element.user.username} with status is online/offline`)
+            }
+        });
+
+        if(!randomList.length){
+            message.channel.send('No online users')
+            console.log(`Cannot send an empty array : randomList`)
+        } else {
+            message.channel.send('---Online users---');
+            message.channel.send(randomList);
+        }
+        if(!dndList.length){
+            message.channel.send('No dnd users')
+            console.log(`Cannot send an empty array : dndList`)
+        } else {
+            message.channel.send('---DnD users---');
+            message.channel.send(dndList);
+        }
+        if(!idleList.length){
+            message.channel.send('No afk users')
+            console.log(`Cannot send an empty array : idleList`)
+        } else {
+            message.channel.send('---AFK users---');
+            message.channel.send(idleList);
+        }
+        if(!offlineList.length){
+            message.channel.send('No offline users')
+            console.log(`Cannot send an empty array : offlineList`)
+        } else {
+            message.channel.send('---Offline users---');
+            message.channel.send(offlineList)
+        }
+        if(!botList.length){
+            message.channel.send('No bot users')
+            console.log(`Cannot send an empty array : botList`)
+        } else {
+            message.channel.send('---Bots in the server---');
+            message.channel.send(botList);
+        }
+        message.channel.send(`Total players online : ${totalOnline}`);
+    })
+}*/
 
 
 
