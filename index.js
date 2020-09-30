@@ -88,7 +88,7 @@ client.on(`message`, (message) => {
 
     try {
         if (!client.commands.has(command) || command == ('start' || 'end')) return;
-        client.commands.get(command).execute(message, db, userquery, userid, uname);
+        client.commands.get(command).execute(message, client, db, userquery, userid, uname);
     } catch (error){
         console.error(error);
         message.reply(`There was an error trying to execute ${command}. . .`)
@@ -160,9 +160,6 @@ client.login(BOT_TOKEN);
     }); */
 
 
-
-
-
 /*function getGuildUsers(message){
     client.guilds.cache.forEach(guild => {
         let randomList = [];
@@ -226,13 +223,13 @@ client.login(BOT_TOKEN);
         }
         message.channel.send(`Total players online : ${totalOnline}`);
     })
-}*/
+}
 
 
 
 
 
-/*    if (message.author.bot) return;
+   if (message.author.bot) return;
 
     const db = new sqlite.Database('./datos.db', sqlite.OPEN_READWRITE);
     let userquery = `SELECT * FROM user WHERE userid = ?`;
@@ -251,7 +248,6 @@ client.login(BOT_TOKEN);
         console.error(error);
         message.reply(`There was an error trying to execute ${command}. . .`)
     } 
-*/
 
 
 
@@ -262,7 +258,8 @@ client.login(BOT_TOKEN);
 
 
 
-/*const http = require('http');
+
+const http = require('http');
 const express = require('express');
 const app = express();
 const hostname = '127.0.0.1';
@@ -281,7 +278,7 @@ function sleep(milliseconds) {
       currentDate = Date.now();
     } while (currentDate - date < milliseconds);
   }
- */
+ 
 
 
 
@@ -308,7 +305,7 @@ function sleep(milliseconds) {
 
 
 
-/*
+
 client.on('ready', () =>{
     console.log('Listo bro');            //Mensaje de inicio en el log
     client.user.setActivity("Tu madre"); //A que esta jugando
@@ -375,5 +372,5 @@ function totalUpdate (database, query, userid){
     sleep(2000);
     totalUpdate(database, query, userid);
     });
-}
+} 
 */

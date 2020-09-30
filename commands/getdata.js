@@ -4,7 +4,7 @@ module.exports = {
     
     execute(message, db, userquery, userid, uname){
         if (!message.mentions.users.size) {
-            getUserData(db, userquery, userid, uname, message);
+            getUserData({caca});
         } else{
             const taggedUser = message.mentions.users.first();
             userid = taggedUser.id;
@@ -41,3 +41,4 @@ function undefinedUserDATA(db, userid, uname){
 function sendUserDATA(userid, uname, row){
     console.log(`${userid} - ${uname} - ${row.total}`);
 }
+
