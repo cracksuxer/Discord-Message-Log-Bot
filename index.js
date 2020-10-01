@@ -10,6 +10,8 @@ const { off } = require('process');
 const { emitKeypressEvents } = require('readline');
 const _ = require('lodash');
 const { compact } = require('lodash');
+const chalk = require('chalk');
+const { blueBright, yellowBright, greenBright, redBright } = require('chalk');
  
 client.commands = new Discord.Collection();
 const commandFiles = fs.readdirSync('./commands/').filter(file => file.endsWith('.js'));
@@ -23,82 +25,98 @@ let array = [0];
 
 client.on(`ready`, () => {
 
-    console.log("Online");
+    const greenBright = chalk.greenBright;
+    const redBright = chalk.redBright;
+    const blueBright = chalk.blueBright;
+    const yellowBright = chalk.yellowBright;
+
+    console.log(greenBright('Online'));
     client.user.setActivity("Tu madre");
 
     const db = new sqlite.Database('./datos.db', sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE, (err) => {
         if (err) {
-            console.log(err.message);
+            console.log(redBright(`ERROR at connecting to the database: ${err.message}`));
         }
-        console.log('Conectado a datos.db');
+        console.log(blueBright('Conectado a datos.db'));
     });
 
-    db.run(`CREATE TABLE IF NOT EXISTS user(ServerId TEXT NOT NULL, UserId TEXT NOT NULL, Username TEXT NOT NULL, TotalUser INTEGER NOT NULL)`);
-    db.run(`CREATE TABLE IF NOT EXISTS channel(ServerId TEXT NOT NULL, ChannelId TEXT NOT NULL, ChannelName TEXT NOT NULL, TotalChannel INTEGER NOT NULL)`)
     db.run(`CREATE TABLE IF NOT EXISTS server(ServerId TEXT, ServerName TEXT)`)
 
     addingServerId(db);
 });
 
+const arrayTest = new Array();
+
 client.on(`message`, (message) => {
 
     if (message.author.bot) return;
 
+    const serverIdList = new Array();
+
+    client.guilds.cache.forEach(server => {
+        serverIdList.push(server.id);
+    })
+
+
     const args = message.content.slice(prefix.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
+    const commandName = args.shift().toLowerCase();
+    const command = client.commands.get(commandName);
+    const userid = message.author.id;
+    const uname = message.author.tag;
+    const isAdmin = message.channel.permissionsFor(message.member).has("ADMINISTRATOR", true);
+    const msgServerId = message.guild.id;
 
-    let userid = message.author.id;
-    let uname = message.author.tag;
-    let isAdmin = message.channel.permissionsFor(message.member).has("ADMINISTRATOR", true);
 
-    if(command == 'end'){
+    if(commandName == 'end'){
         if(isAdmin == false) return;
-        if (array.slice(-1) == 0) {
-            console.log('The bot is already stopped')
-            message.channel.send('The bot is already stopped')
-        } else {
-            array.pop();
-            console.log(`Pop array () ; Array = ${array}`)
-            message.channel.send(`Pop array () ; Array = ${array}`)
-        }
-    } 
-    if(command == 'start'){
+        removeElement(arrayTest, msgServerId)
+    }
+
+    if(commandName == 'start'){
         if(isAdmin == false) return;
-        if(array.slice(-1) == 1){
-            console.log('The bot is already logging messages');
-            message.channel.send('The bot is already logging messages');
-        } else {
-            array.push(1);
-            console.log(`Pushed array (1) ; Array = ${array}`);
-            message.channel.send(`Pushed array (1) ; Array = ${array}`);
+        if(isElementInArray(arrayTest, message.guild.id) == true){
+            console.log(yellowBright('The bot is already logging messages'))
+            return;
         }
+        arrayTest.push(message.guild.id);
     }
 
-
-    if(message.content == 'ok'){
-        const tableName = 'Pedro'
-        const columnA = 'Jose'
-        const columnB = 'Guanche'
-        makeTable(tableName, columnA, columnB);
+    function removeElement(array, elem) {
+        const index = array.indexOf(elem);
+        if (index > -1) {
+            array.splice(index, 1);
+        } else {console.log(yellowBright('ERROR : The bot is already stopped'))}
     }
 
-
-
-    if(array.slice(-1) == 1){
-        console.log(`Logging messages because -> New array: ${array.slice(-1)} = 1`)
-        message.channel.send(`Logging messages because -> New array: ${array.slice(-1)} = 1`)
-        client.commands.get('start').execute(message);
-    } else {
-        console.log(`Cant log messages because -> New array: ${array.slice(-1)} != 1`)
-        message.channel.send(`Cant log messages because -> New array: ${array.slice(-1)} != 1`)
+    function isElementInArray(array, elem){
+        const index = array.indexOf(elem);
+        if (index > -1){return true}
+        else{return false}
     }
 
+    let isSeverOnList = 0;
+
+    arrayTest.forEach(server => {
+        if(server == message.guild.id){
+            client.commands.get('start').execute(message);
+            isSeverOnList++;
+        }
+    })
+
+    if(isSeverOnList == 0){
+        console.log(blueBright('The bot is stopped'))
+    } else{
+        console.log(greenBright('The guild is in the list'))
+        console.log(greenBright(`Logging messages`))
+    }
+    
     try {
-        if (!client.commands.has(command) || command == ('start' || 'end')) return;
-        client.commands.get(command).execute(message, client, userid, uname);
+        if (!client.commands.has(commandName) || commandName == ('start' || 'end')) return;
+        command.execute(message, client, userid, uname);
     } catch (error){
         console.error(error);
-        message.reply(`There was an error trying to execute ${command}. . .`)
+        console.log(redBright(`There was an error trying to execute ${commandName}. . .`))
+        message.reply(`There was an error trying to execute ${commandName}. . .`)
     } 
 });
 
@@ -106,7 +124,7 @@ client.on(`message`, (message) => {
 function addingServerId(db) {
 
     const serverIdList = [];
-    let serverquery = `SELECT ServerId FROM server`;
+    const serverquery = `SELECT ServerId FROM server`;
 
     client.guilds.cache.forEach(server => {
         serverIdList.push(server.id)
@@ -117,7 +135,7 @@ function addingServerId(db) {
     db.all(serverquery, [], function(err, rows) {
 
         if(err){
-            console.log(err);
+            console.log(redBright(`ERROR`) + err);
         }
         
         serverIdList.forEach(serverId =>{
@@ -128,11 +146,11 @@ function addingServerId(db) {
                 }
             })
             if(checker == 0){
-                let serverName = client.guilds.cache.get(serverId).name;
-                let insertdata = db.prepare(`INSERT INTO server VALUES(?,?)`)
+                const serverName = client.guilds.cache.get(serverId).name;
+                const insertdata = db.prepare(`INSERT INTO server VALUES(?,?)`)
                 insertdata.run(serverId, serverName);
                 insertdata.finalize();
-                console.log('---Added new server---');
+                console.log(blueBright('---Added new server---'));
             }
         })
     });
@@ -143,6 +161,14 @@ function addingServerTables(serverIdList, db){
         db.run(`CREATE TABLE IF NOT EXISTS Users_${server}(ServerId TEXT NOT NULL, UserId TEXT NOT NULL, Username TEXT NOT NULL, TotalUser INTEGER NOT NULL)`);
         db.run(`CREATE TABLE IF NOT EXISTS Channels_${server}(ServerId TEXT NOT NULL, ChannelId TEXT NOT NULL, ChannelName TEXT NOT NULL, TotalChannel INTEGER NOT NULL)`);
     })
+}
+
+function removeElement(array, elem) {
+    var index = array.indexOf(elem);
+    if (index > -1) {
+        array.splice(index, 1);
+    }
+    return array;
 }
 
 client.login(BOT_TOKEN); 
