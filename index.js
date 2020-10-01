@@ -26,15 +26,15 @@ client.on(`ready`, () => {
     console.log("Online");
     client.user.setActivity("Tu madre");
 
-    let db = new sqlite.Database('./datos.db', sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE, (err) => {
+    const db = new sqlite.Database('./datos.db', sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE, (err) => {
         if (err) {
             console.log(err.message);
         }
         console.log('Conectado a datos.db');
     });
 
-    db.run(`CREATE TABLE IF NOT EXISTS user(ChannelId TEXT NOT NULL, UserId TEXT NOT NULL, Username TEXT NOT NULL, Total INTEGER NOT NULL)`);
-    db.run(`CREATE TABLE IF NOT EXISTS channel(ServerId TEXT NOT NULL, ChannelId TEXT NOT NULL, ChannelName TEXT NOT NULL, Total INTEGER NOT NULL)`)
+    db.run(`CREATE TABLE IF NOT EXISTS user(ServerId TEXT NOT NULL, UserId TEXT NOT NULL, Username TEXT NOT NULL, TotalUser INTEGER NOT NULL)`);
+    db.run(`CREATE TABLE IF NOT EXISTS channel(ServerId TEXT NOT NULL, ChannelId TEXT NOT NULL, ChannelName TEXT NOT NULL, TotalChannel INTEGER NOT NULL)`)
     db.run(`CREATE TABLE IF NOT EXISTS server(ServerId TEXT, ServerName TEXT)`)
 
     addingServerId(db);
@@ -43,9 +43,6 @@ client.on(`ready`, () => {
 client.on(`message`, (message) => {
 
     if (message.author.bot) return;
-
-    const db = new sqlite.Database('./datos.db', sqlite.OPEN_READWRITE);
-    let userquery = `SELECT * FROM user WHERE userid = ?`;
 
     const args = message.content.slice(prefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
@@ -69,18 +66,28 @@ client.on(`message`, (message) => {
         if(isAdmin == false) return;
         if(array.slice(-1) == 1){
             console.log('The bot is already logging messages');
-            message.channel.send('The bot is already logging messages')
+            message.channel.send('The bot is already logging messages');
         } else {
             array.push(1);
-            console.log(`Pushed array (1) ; Array = ${array}`)
-            message.channel.send(`Pushed array (1) ; Array = ${array}`)
+            console.log(`Pushed array (1) ; Array = ${array}`);
+            message.channel.send(`Pushed array (1) ; Array = ${array}`);
         }
     }
+
+
+    if(message.content == 'ok'){
+        const tableName = 'Pedro'
+        const columnA = 'Jose'
+        const columnB = 'Guanche'
+        makeTable(tableName, columnA, columnB);
+    }
+
+
 
     if(array.slice(-1) == 1){
         console.log(`Logging messages because -> New array: ${array.slice(-1)} = 1`)
         message.channel.send(`Logging messages because -> New array: ${array.slice(-1)} = 1`)
-        client.commands.get('start').execute(message, db, userquery);
+        client.commands.get('start').execute(message);
     } else {
         console.log(`Cant log messages because -> New array: ${array.slice(-1)} != 1`)
         message.channel.send(`Cant log messages because -> New array: ${array.slice(-1)} != 1`)
@@ -88,13 +95,11 @@ client.on(`message`, (message) => {
 
     try {
         if (!client.commands.has(command) || command == ('start' || 'end')) return;
-        client.commands.get(command).execute(message, client, db, userquery, userid, uname);
+        client.commands.get(command).execute(message, client, userid, uname);
     } catch (error){
         console.error(error);
         message.reply(`There was an error trying to execute ${command}. . .`)
     } 
-
-
 });
 
 
@@ -130,6 +135,7 @@ function addingServerId(db) {
         })
     });
 }
+
 
 client.login(BOT_TOKEN); 
 

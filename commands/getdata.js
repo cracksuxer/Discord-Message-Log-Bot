@@ -1,44 +1,61 @@
+const sqlite = require('sqlite3').verbose();
+
+
 module.exports = {
     name: 'getdata',
     description: 'Getting data from the DB',
     
-    execute(message, db, userquery, userid, uname){
+    execute(message){
+        const db = new sqlite.Database('./datos.db', sqlite.OPEN_READWRITE);
+        const serverId = message.guild.id;
+        let userId = message.author.id;
         if (!message.mentions.users.size) {
-            getUserData({caca});
+            getUserData(db, userId, serverId);
         } else{
             const taggedUser = message.mentions.users.first();
-            userid = taggedUser.id;
-            uname = taggedUser.username;
-            getUserData(db, userquery, userid, uname);
+            userId = taggedUser.id;
+            getUserData(db, userId, serverId);
         }
     }
 }
 
-function getUserData(db, userquery, userid, uname){
-    db.get(userquery, [userid], (err, row) => {
+function getUserData(db, userId, serverId){
+
+    const queryTest = `
+    SELECT a.ServerId, a.ServerName, b.UserId, b.Username, b.TotalUser
+    FROM server a 
+    INNER JOIN user b
+    ON a.ServerId = b.ServerId
+    WHERE a.ServerId = ?
+    AND b.userId = ?`;
+
+    db.get(queryTest, [serverId, userId], function(err, rows){
 
         if (err) {
-            console.log(err);
+            console.log(`There has been an error in getUserData function : ${err}`);
             return;
         }
-        if(row == undefined){
 
-            undefinedUserDATA(db, userid, uname, row);
-
-        }else{sendUserDATA(userid, uname, row);}
+        if(rows == undefined){
+            undefinedUserDATA()
+        } else {
+            sendUserDATA(rows);
+        }
     });
 }
 
-function undefinedUserDATA(db, userid, uname){
-        let insertdata = db.prepare(`INSERT INTO user VALUES(?,?,?)`);
-        insertdata.run(userid, uname, 1);
-        insertdata.finalize();
-        db.close();
-        console.log('---Added new user---')
-        console.log(`${userid} - ${uname} - 1`);
+function undefinedUserDATA(){
+    console.log('This member has not sent any message in this guild');
+    return;
 }
 
-function sendUserDATA(userid, uname, row){
-    console.log(`${userid} - ${uname} - ${row.total}`);
+function sendUserDATA(rows){
+    console.log(`
+    ServerId:    ${rows.ServerId}, 
+    ServerName:  ${rows.ServerName}, 
+    UserId:      ${rows.UserId}, 
+    Username:    ${rows.Username}, 
+    TotalUser:   ${rows.TotalUser}
+`);
 }
 
