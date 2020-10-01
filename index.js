@@ -112,6 +112,8 @@ function addingServerId(db) {
         serverIdList.push(server.id)
     })
 
+    addingServerTables(serverIdList, db);
+
     db.all(serverquery, [], function(err, rows) {
 
         if(err){
@@ -136,6 +138,12 @@ function addingServerId(db) {
     });
 }
 
+function addingServerTables(serverIdList, db){
+    serverIdList.forEach(server => {
+        db.run(`CREATE TABLE IF NOT EXISTS Users_${server}(ServerId TEXT NOT NULL, UserId TEXT NOT NULL, Username TEXT NOT NULL, TotalUser INTEGER NOT NULL)`);
+        db.run(`CREATE TABLE IF NOT EXISTS Channels_${server}(ServerId TEXT NOT NULL, ChannelId TEXT NOT NULL, ChannelName TEXT NOT NULL, TotalChannel INTEGER NOT NULL)`);
+    })
+}
 
 client.login(BOT_TOKEN); 
 

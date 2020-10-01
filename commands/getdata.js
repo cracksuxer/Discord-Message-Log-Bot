@@ -24,7 +24,7 @@ function getUserData(db, userId, serverId){
     const queryTest = `
     SELECT a.ServerId, a.ServerName, b.UserId, b.Username, b.TotalUser
     FROM server a 
-    INNER JOIN user b
+    INNER JOIN Users_${serverId} b
     ON a.ServerId = b.ServerId
     WHERE a.ServerId = ?
     AND b.userId = ?`;
