@@ -1,3 +1,5 @@
+const { redBright, blueBright } = require('chalk');
+
 const sqlite = require('sqlite3').verbose();
 
 
@@ -5,21 +7,22 @@ module.exports = {
     name: 'total-user',
     description: 'Sum of all messages',
     execute(message){
-        let totalx = 0;
+        const serverId = message.guild.id;
+        let total = 0;
         const dab = new sqlite.Database('./datos.db', sqlite.OPEN_READONLY);
-        dab.all("SELECT total FROM user", function(err, rows) {
+        dab.all(`SELECT TotalUser FROM Users_${serverId}`, function(err, rows) {
             if(err) {
-                console.log("Error");
+                console.log(redBright("ERROR"));
                 return;
             }
             const userList = [];
             rows.forEach(function (row) {
-                userList.push(row.total);
-                totalx = totalx + row.total;
+                userList.push(row.TotalUser);
+                total += row.TotalUser;
             })
             console.log(userList);
-            console.log(totalx);
-            message.channel.send('Mensajes totales ' + totalx);
+            console.log(blueBright('Mensajes totales : ') + total);
+            message.channel.send('Mensajes totales ' + total);
         });
     }
 }

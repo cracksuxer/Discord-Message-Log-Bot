@@ -1,4 +1,6 @@
 const sqlite = require('sqlite3').verbose();
+const { redBright } = require('chalk');
+const { MessageEmbed } = require('discord.js');
 
 
 module.exports = {
@@ -10,7 +12,7 @@ module.exports = {
         const serverId = message.guild.id;
         let userId = message.author.id;
         if (!message.mentions.users.size) {
-            getUserData(db, userId, serverId);
+            getUserData(db, userId, serverId, message);
         } else{
             const taggedUser = message.mentions.users.first();
             userId = taggedUser.id;
@@ -19,9 +21,9 @@ module.exports = {
     }
 }
 
-function getUserData(db, userId, serverId){
+function getUserData(db, userId, serverId, message){
 
-    const queryTest = `
+    const getUserQuery = `
     SELECT a.ServerId, a.ServerName, b.UserId, b.Username, b.TotalUser
     FROM server a 
     INNER JOIN Users_${serverId} b
@@ -29,17 +31,17 @@ function getUserData(db, userId, serverId){
     WHERE a.ServerId = ?
     AND b.userId = ?`;
 
-    db.get(queryTest, [serverId, userId], function(err, rows){
+    db.get(getUserQuery, [serverId, userId], function(err, rows){
 
         if (err) {
-            console.log(`There has been an error in getUserData function : ${err}`);
+            console.log(redBright('ERROR : getUserDataQuery function') + err);
             return;
         }
 
         if(rows == undefined){
             undefinedUserDATA()
         } else {
-            sendUserDATA(rows);
+            sendUserDATA(rows, message);
         }
     });
 }
@@ -49,7 +51,7 @@ function undefinedUserDATA(){
     return;
 }
 
-function sendUserDATA(rows){
+function sendUserDATA(rows, message){
     console.log(`
     ServerId:    ${rows.ServerId}, 
     ServerName:  ${rows.ServerName}, 
@@ -57,5 +59,17 @@ function sendUserDATA(rows){
     Username:    ${rows.Username}, 
     TotalUser:   ${rows.TotalUser}
 `);
+    const embed = new MessageEmbed();
+        embed.setTitle('User Info')
+        embed.setThumbnail(message.author.displayAvatarURL())
+        embed.setColor(0x172e80)
+        embed.setDescription(`
+            **ServerId:**\t${rows.ServerId}
+            **ServerName:**\t${rows.ServerName}
+            **UserId:**\t${rows.UserId}
+            **Username:**\t${rows.Username}
+            **TotalUser:**\t${rows.TotalUser}
+        `)
+    message.channel.send(embed);
 }
 
